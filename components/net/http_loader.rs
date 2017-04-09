@@ -31,11 +31,11 @@ use hyper_openssl::OpensslClient;
 use hyper_serde::Serde;
 use log;
 use msg::constellation_msg::PipelineId;
-use net_traits::{CookieSource, FetchMetadata, NetworkError, ReferrerPolicy};
+use net_traits::{CookieSource, FetchMetadata, HttpsState, NetworkError, ReferrerPolicy};
 use net_traits::request::{CacheMode, CredentialsMode, Destination, Origin};
 use net_traits::request::{RedirectMode, Referrer, Request, RequestMode};
 use net_traits::request::{ResponseTainting, Type};
-use net_traits::response::{HttpsState, Response, ResponseBody, ResponseType};
+use net_traits::response::{Response, ResponseBody, ResponseType};
 use resource_thread::AuthCache;
 use servo_url::{ImmutableOrigin, ServoUrl};
 use std::collections::HashSet;
@@ -1171,9 +1171,12 @@ fn http_network_fetch(request: &Request,
 
         // Substep 2
 
-    // TODO Determine if response was retrieved over HTTPS
-    // TODO Servo needs to decide what ciphers are to be treated as "deprecated"
-    response.https_state = HttpsState::None;
+    // TODO: Servo needs to decide what ciphers are to be treated as "modern".
+    response.https_state = match request.current_url().scheme() {
+        "https" => HttpsState::Deprecated,
+        "http" => HttpsState::None,
+        _ => panic!("The current URL's scheme should be an HTTP(S) scheme here."),
+    };
 
     // TODO Read request
 
